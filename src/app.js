@@ -7,6 +7,8 @@ const authRoutes = require("./modules/auth/auth.routes");
 const userRoutes = require("./modules/users/user.routes");
 const channelRoutes = require("./modules/channels/channel.routes");
 const videoRoutes=require("./modules/videos/video.routes");
+const uploadRoutes = require("./modules/uploads/upload.routes");
+
 const app = express();
 
 app.use(helmet());
@@ -26,4 +28,5 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/channels", channelRoutes);
 app.use("/api/v1/videos", videoRoutes);
+app.use("/api/v1/uploads", uploadRoutes);
 module.exports = app;
