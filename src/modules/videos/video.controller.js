@@ -100,6 +100,30 @@ const getMyVideos = async (req, res) => {
         });
     }
 };
+
+const getPublishedVideos = async (req, res) => {
+
+    try {
+
+        const videos = await videoService.getPublishedVideos();
+
+        return res.status(200).json({
+            success: true,
+            count: videos.length,
+            data: videos
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+
+
 const {
     createPlaybackUrl
 } = require("../../services/playback.service");
@@ -387,12 +411,15 @@ const getHlsSegment = async (req, res) => {
     }
 };
 
+
 module.exports = {
     createVideo,
     getVideoById,
     getMyVideos,
+    getPublishedVideos,
     getVideoPlayback,
     getHlsMasterPlaylist,
     getHlsVariantPlaylist,
-    getHlsSegment
+    getHlsSegment,
+
 };

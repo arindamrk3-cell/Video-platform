@@ -74,8 +74,26 @@ const getMyVideos = async (owner) => {
     return videos;
 };
 
+const getPublishedVideos = async () => {
+
+    const videos = await Video.find({
+        visibility: "public",
+        status: "published"
+    })
+        .populate(
+            "channel",
+            "name handle profileImage subscribersCount"
+        )
+        .sort({
+            publishedAt: -1
+        });
+
+    return videos;
+};
+
 module.exports = {
     createVideo,
     getVideoById,
-    getMyVideos
+    getMyVideos,
+    getPublishedVideos
 };
