@@ -3,6 +3,10 @@ const UploadSession = require("./upload-session.model");
 const Video = require("../videos/video.model");
 const Channel = require("../channels/channel.model");
 const { createUploadUrl,checkObjectExists } = require("../../services/storage.service");
+const {
+    processVideo
+} = require("../../services/video-processing.service");
+
 const initUpload = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -314,6 +318,16 @@ const completeUpload = async (req, res) => {
         video.source.storageKey = uploadSession.storageKey;
 
         await video.save();
+
+        processVideo({
+    videoId: video._id,
+    storageKey: uploadSession.storageKey
+}).catch((error) => {
+    console.error(
+        `[UploadProcessor] Video processing failed: ${video._id}`,
+        error
+    );
+});
 
         return res.status(200).json({
             success: true,

@@ -6,7 +6,7 @@ const Video = require("../modules/videos/video.model");
 
 const {
     downloadObject,
-    uploadDirectory
+    uploadDirectory,uploadObject
 } = require("./storage.service");
 
 
@@ -39,6 +39,15 @@ const processVideo = async ({
             processingDir,
             "hls"
         );
+        const thumbnailDir = path.join(
+    processingDir,
+    "thumbnails"
+);
+
+const thumbnailPath = path.join(
+    thumbnailDir,
+    "thumbnail.jpg"
+);
 
         /*
          * 1. Download original from B2
@@ -75,13 +84,31 @@ console.log(
     `[VideoProcessor] Duration: ${duration} seconds`
 );
         console.log(
-            `[VideoProcessor] Starting FFmpeg...`
-        );
+    `[VideoProcessor] Generating thumbnail...`
+);
 
-        await runFFmpeg({
-            inputPath,
-            outputDir
-        });
+await fs.mkdir(thumbnailDir, {
+    recursive: true
+});
+
+await generateThumbnail({
+    inputPath,
+    outputPath: thumbnailPath,
+    duration
+});
+
+console.log(
+    `[VideoProcessor] Thumbnail generated`
+);
+
+console.log(
+    `[VideoProcessor] Starting FFmpeg...`
+);
+
+await runFFmpeg({
+    inputPath,
+    outputDir
+});
 
         console.log(
             `[VideoProcessor] FFmpeg processing completed`
@@ -101,6 +128,22 @@ console.log(
             localDirectory: outputDir,
             storagePrefix: hlsStoragePrefix
         });
+        const thumbnailStorageKey =
+    `videos/${videoId}/thumbnails/thumbnail.jpg`;
+
+console.log(
+    `[VideoProcessor] Uploading thumbnail to B2...`
+);
+
+await uploadObject({
+    storageKey: thumbnailStorageKey,
+    filePath: thumbnailPath,
+    contentType: "image/jpeg"
+});
+
+console.log(
+    `[VideoProcessor] Thumbnail upload completed`
+);
 
         console.log(
             `[VideoProcessor] HLS upload completed`
@@ -116,6 +159,7 @@ console.log(
         "processing.progress": 100,
         "processing.error": null,
         "stream.manifestUrl": masterPlaylistKey,
+        thumbnailUrl: thumbnailStorageKey,
         duration,
         publishedAt: new Date()
     },
@@ -212,6 +256,74 @@ const getVideoDuration = ({
         });
     });
 };
+
+
+const generateThumbnail = ({
+    inputPath,
+    outputPath,
+    duration
+}) => {
+
+    return new Promise((resolve, reject) => {
+
+        const timestamp = Math.min(
+            1,
+            Math.max(0, duration / 2)
+        );
+
+        const args = [
+            "-ss",
+            String(timestamp),
+
+            "-i",
+            inputPath,
+
+            "-frames:v",
+            "1",
+
+            "-q:v",
+            "2",
+
+            "-vf",
+            "scale=1280:-2",
+
+            outputPath
+        ];
+
+        const ffmpeg = spawn(
+            "ffmpeg",
+            args
+        );
+
+        let errorOutput = "";
+
+        ffmpeg.stderr.on("data", (data) => {
+            errorOutput += data.toString();
+        });
+
+        ffmpeg.on("error", (error) => {
+            reject(
+                new Error(
+                    `Failed to start thumbnail FFmpeg: ${error.message}`
+                )
+            );
+        });
+
+        ffmpeg.on("close", (code) => {
+
+            if (code === 0) {
+                resolve();
+            } else {
+                reject(
+                    new Error(
+                        `Thumbnail FFmpeg failed: ${errorOutput}`
+                    )
+                );
+            }
+        });
+    });
+};
+
 
 const runFFmpeg = ({
     inputPath,

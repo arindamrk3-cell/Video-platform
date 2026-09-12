@@ -183,6 +183,69 @@ const getVideoPlayback = async (req, res) => {
     }
 };
 
+const getVideoThumbnail = async (req, res) => {
+    try {
+        const { videoId } = req.params;
+
+        const video = await Video.findOne({
+            _id: videoId,
+            visibility: "public",
+            status: "published"
+        });
+
+        if (!video) {
+            return res.status(404).json({
+                success: false,
+                message: "Video not found or unavailable"
+            });
+        }
+
+        if (!video.thumbnailUrl) {
+            return res.status(404).json({
+                success: false,
+                message: "Thumbnail not available"
+            });
+        }
+
+        const result = await getObjectStream({
+            storageKey: video.thumbnailUrl
+        });
+
+        res.status(200);
+
+        res.set(
+            "Content-Type",
+            result.contentType || "image/jpeg"
+        );
+
+        res.set(
+            "Cache-Control",
+            "public, max-age=3600"
+        );
+
+        if (result.contentLength) {
+            res.set(
+                "Content-Length",
+                result.contentLength.toString()
+            );
+        }
+
+        result.body.pipe(res);
+
+    } catch (error) {
+        console.error(
+            "[Thumbnail] Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to load video thumbnail"
+        });
+    }
+};
+
+
 const {
     getObjectStream
 } = require("../../services/storage.service");
@@ -418,6 +481,7 @@ module.exports = {
     getMyVideos,
     getPublishedVideos,
     getVideoPlayback,
+    getVideoThumbnail,
     getHlsMasterPlaylist,
     getHlsVariantPlaylist,
     getHlsSegment,
